@@ -6,12 +6,12 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
 library(tidyverse)
-library(ggridges)
+library(patchwork)
 ```
 
 
@@ -39,187 +39,234 @@ weather_df
 ```
 
 ```{r}
-weather_df |>
+weather_df |> 
   ggplot(aes(x = tmin, y = tmax)) + 
-  geom_point()
-```
-
-## Advanced Plot
-
-```{r, fig.width= 8, fig.height= 6}
-ggplot(weather_df, aes(x = tmin, y = tmax)) + 
-  geom_point(aes(color = name), alpha = .5) +
-  geom_smooth(se = FALSE)
-```
-
-
-```{r, fig.width= 8, fig.height= 6}
-ggplot(weather_df, aes(x = tmin, y = tmax,color = name)) + 
-  geom_point( alpha = .5) +
-  geom_smooth(se = FALSE)
-```
-
-
-```{r, fig.width= 12, fig.height= 4}
-ggplot(weather_df, aes(x = tmin, y = tmax,color = name)) + 
-  geom_point( alpha = .5) +
-  geom_smooth(se = FALSE) +
-  facet_grid(. ~ name)
-```
-
-
-
-
-Let's make somewhat interesting scatterplot.
-
-```{r, fig.width= 12, fig.height= 5}
-weather_df |> 
-  ggplot(aes(x = date, y= tmax, color = name, size = prcp))+
-  geom_point(alpha=.3) +
-  geom_smooth(se = FALSE) +
-  facet_grid(. ~ name)
+  geom_point(aes(color = name), alpha = .5) + 
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    color = "Location",
+    caption = "Data from the rnoaa package"
+  )+ 
+  scale_x_continuous(
+    breaks = c(-15, 0, 15), 
+    labels = c("-15º C", "0", "15")) + 
+  scale_y_continuous(
+    trans = "sqrt", 
+    position = "right")
 ```
 
 ```{r}
 weather_df |> 
-  filter(name == 'CentralPark_NY') |> 
-  pivot_longer(tmax:tmin,
-               names_to = 'type',
-               values_to = 'temp') |> 
-  mutate(temp= temp * ( 9 / 5 ) + 32) |> 
-  ggplot(aes(x = date, y = temp, color = type))+
-  geom_point(alpha=.3)+
-  geom_smooth(se = FALSE)
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = .5) + 
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    color = "Location",
+    caption = "Data from the rnoaa package") + 
+  scale_color_hue(h = c(100, 300))
+```
+
+### `viridis::scale_color_viridis`
+
+```{r}
+ggp_temp_plot = 
+  weather_df |> 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = .5) + 
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    color = "Location",
+    caption = "Data from the rnoaa package"
+  ) + 
+  viridis::scale_color_viridis(
+    name = "Location", 
+    discrete = TRUE
+  )
+
+ggp_temp_plot
+```
+
+```{r}
+ggp_temp_plot + 
+  theme(legend.position = "bottom")
+```
+
+```{r}
+ggp_temp_plot + 
+  theme_bw() + 
+  theme(legend.position = "bottom")
+```
+
+```{r}
+ggp_temp_plot + 
+  theme_classic() + 
+  theme(legend.position = "bottom")
+```
+
+```{r}
+ggp_temp_plot + 
+  ggthemes::theme_excel() + 
+  theme(legend.position = "bottom")
 ```
 
 
 ```{r}
-weather_df |> 
-  filter(name == 'CentralPark_NY') |> 
-  mutate(tmax_f= tmax * ( 9 / 5 ) + 32,
-         tmin_f= tmin * ( 9 / 5 ) + 32) |> 
-  ggplot(aes(x = tmax_f, y = tmin_f))+
-  geom_point(alpha=.3)+
-  geom_smooth(method = "lm", se = FALSE)
+ weather_df |> 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(aes(size=prcp), alpha = .5) + 
+  geom_line()+
+  labs(
+    title = "Temperature plot",
+    x = "Date",
+    y = "Maxiumum daily temperature (C)",
+    color = "Location",
+    caption = "Data from the rnoaa package"
+  ) + 
+  viridis::scale_color_viridis(discrete = TRUE)+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+### Setting Options
+
+```{r}
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+```{r}
+central_park_df = 
+  weather_df |> 
+  filter(name == "CentralPark_NY")
+
+molokai_df = 
+  weather_df |> 
+  filter(name == "Molokai_HI")
+
+ggplot(data = molokai_df, aes(x = date, y = tmax, color = name)) + 
+  geom_point() + 
+  geom_line(data = central_park_df) 
+```
+
+### `patchwork`
+
+This package is intended to help combine panels into a plot that couldn't be create better using data tidying steps
+
+```{r, fig.width=8,fig.height=8}
+tmax_tmin_p = 
+  weather_df |> 
+  ggplot(aes(x = tmax, y = tmin, color = name)) + 
+  geom_point(alpha = .5) +
+  theme(legend.position = "none")
+
+prcp_dens_p = 
+  weather_df |> 
+  filter(prcp > 0) |> 
+  ggplot(aes(x = prcp, fill = name)) + 
+  geom_density(alpha = .5) + 
+  theme(legend.position = "none")
+
+tmax_date_p = 
+  weather_df |> 
+  ggplot(aes(x = date, y = tmax, color = name)) + 
+  geom_point(aes(size=prcp),alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  theme(legend.position = "bottom")
+
+(tmax_tmin_p + prcp_dens_p) / tmax_date_p
 ```
 
 ```{r}
-weather_df |> 
-  ggplot(aes(x = tmin, y = tmax))+
-  geom_hex()
+weather_df |>
+  mutate(name = forcats::fct_relevel(name, c("Molokai_HI", "CentralPark_NY", "Waterhole_WA"))) |> 
+  ggplot(aes(x = name, y = tmax)) + 
+  geom_violin(aes(fill = name, color = name), alpha = .5) + 
+  theme(legend.position = "bottom")
 ```
+
 
 ```{r}
-weather_df |> 
-  ggplot(aes(x = tmin, y = tmax)) +
-  geom_point(color = "blue")
+weather_df |>
+  select(name, tmax, tmin) |> 
+  pivot_longer(
+    tmax:tmin,
+    names_to = "observation", 
+    values_to = "temp") |> 
+  ggplot(aes(x = temp, fill = observation)) +
+  geom_density(alpha = .5) + 
+  facet_grid(~name) + 
+  viridis::scale_fill_viridis(discrete = TRUE)
 ```
+
 
 ```{r}
-weather_df |> 
-  ggplot(aes(x = tmin)) +
-  geom_histogram()
-```
+pulse_data = 
+  haven::read_sas("./data/public_pulse_data.sas7bdat") |>
+  janitor::clean_names() |>
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit", 
+    names_prefix = "bdi_score_",
+    values_to = "bdi") |>
+  select(id, visit, everything()) |>
+  mutate(
+    visit = recode(visit, "bl" = "00m"),
+    visit = factor(visit, levels = str_c(c("00", "01", "06", "12"), "m"))) |>
+  arrange(id, visit)
 
-```{r}
-weather_df |> 
-  ggplot(aes(x = tmin, fill= name)) +
-  geom_histogram()
-```
-
-```{r}
-weather_df |> 
-  ggplot(aes(x = tmin, fill= name)) +
-  geom_histogram(position = "dodge")
-```
-
-
-How do I fix this?
-
-```{r, fig.width= 12, fig.height= 5}
-weather_df |> 
-  ggplot(aes(x = tmin, fill = name)) +
-  geom_histogram() +
-  facet_grid(. ~ name)
-```
-
-Maybe a density plot?
-
-```{r}
-weather_df |> 
-  ggplot(aes(x = tmin, color = name, fill = name)) + 
-  geom_density(alpha = .3)
-```
-
-
-Box-Plot
-
-```{r}
-weather_df |> 
-  ggplot(aes(x = name, y= tmin, fill = name))+
+ggplot(pulse_data, aes(x = visit, y = bdi)) + 
   geom_boxplot()
 ```
 
-
 ```{r}
-weather_df |> 
-  ggplot(aes(x = name, y= tmin, fill = name))+
-  geom_violin(alpha = .8)
-```
+pup_data = 
+  read_csv("./data/FAS_pups.csv", na = c("NA", ".", "")) |>
+  janitor::clean_names() |>
+  mutate(
+    sex = 
+      case_match(
+        sex, 
+        1 ~ "male", 
+        2 ~ "female"))
 
+litter_data = 
+  read_csv("./data/FAS_litters.csv", na = c("NA", ".", "")) |>
+  janitor::clean_names() |>
+  separate(group, into = c("dose", "day_of_tx"), sep = 3)
 
-Ridge Plot
+fas_data = left_join(pup_data, litter_data, by = "litter_number") 
 
-```{r, fig.width= 8, fig.height==8}
-weather_df |> 
-  ggplot(aes(x = tmin, y = name)) + 
-  geom_density_ridges(aes(fill = name), alpha =.7, color = 'grey')
-```
-
-
-```{r}
-weather_df |> 
-  ggplot(aes(x = name, y = prcp, fill= name))+
-  geom_boxplot(outliers = FALSE)
-```
-
-
-```{r}
-weather_df |> 
-  ggplot(aes(x = name, y = prcp, fill= name))+
-  geom_violin()
-```
-
-```{r}
-weather_df |> 
-  ggplot(aes(y = name, x = prcp))+
-  geom_density_ridges(aes(fill = name), alpha =.7, color = 'grey')
-```
-
-
-```{r}
-weather_df |> 
-  ggplot(aes(y = prcp))+
-  geom_density(aes(fill = name), alpha =.7, color = 'grey')
-```
-
-
-```{r}
-ggp_weather = 
-  weather_df |> filter(prcp > 10 , prcp < 1000) |> 
-    ggplot(aes(x = prcp, fill = name, color = name)) + 
-    geom_density(alpha = .3)
-
-ggsave("ggp_weather.pdf", ggp_weather, width = 8, height = 6)
-```
-
-
-
-
-
-
-
-```{r}
+fas_data |> 
+  select(sex, dose, day_of_tx, pd_ears:pd_walk) |> 
+  pivot_longer(
+    pd_ears:pd_walk,
+    names_to = "outcome", 
+    values_to = "pn_day") |> 
+  drop_na() |> 
+  mutate(outcome = forcats::fct_reorder(outcome, pn_day, median)) |> 
+  ggplot(aes(x = dose, y = pn_day)) + 
+  geom_violin() + 
+  facet_grid(day_of_tx ~ outcome)
 
 ```
 
